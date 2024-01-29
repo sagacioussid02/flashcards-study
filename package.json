@@ -1,0 +1,22 @@
+{
+    "name": "flashcards-study",
+    "version": "1.0.0",
+    "description": "Your application description",
+    "main": "dist/app.js",
+    "scripts": {
+        "start": "node dist/app.js",
+        "build": "tsc && cp src/*.json dist/"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^4.17.1",
+        "multer": "^1.4.2",
+        "openai": "^4.26.0",
+        "pdf-parse": "^1.1.1"
+    },
+    "engines": {
+        "node": ">=14.0.0"
+    },
+    "license": "MIT",
+    "author": "siddharthuncc@gmail.com"
+}
