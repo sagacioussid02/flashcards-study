@@ -30,9 +30,8 @@ const FLASHCARDS_PROMPT = `
   You are an assistant tasked with creating flashcards. Generate flashcards summarizing the given article 
   in the form of a nested array. Each flashcard should have the following structure: [Title, Front side, Back side]
   Additionally, provide two or more flashcards with relevant facts that are not explicitly mentioned in the article 
-  but are related to the content.
+  but are related to the content. Be creative and explore interesting details and return in the form of nested array.
 `
-
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
@@ -47,12 +46,21 @@ app.get('/', (req, res) => {
 app.post('/generate-flashcards', upload.single('pdf'), async (req, res) => {
   try {
     console.log("Hey there! We are working on genrating flashcards")
-    // Extract text from the uploaded PDF
-    const pdfData = req.file.buffer;
-    const pdfText = await extractTextFromPDF(pdfData);
+    let userText;
+
+    // Check if the request contains a PDF file
+    if (req.file) {
+      const pdfData = req.file.buffer;
+      userText = await extractTextFromPDF(pdfData);
+    } else {
+      // If no PDF file, check if the request contains text
+      userText = req.body.text;
+    }
+
+    console.log("Translated text:", userText)
 
     // Analyze text using OpenAI and generate flashcards
-    const generatedFlashcards = await generateFlashcards(pdfText);
+    const generatedFlashcards = await generateFlashcards(userText);
 
     console.log("Hey there! We have uploaded pdf for processing flashcards")
 
@@ -70,7 +78,6 @@ async function extractTextFromPDF(pdfData) {
   return data.text;
 }
 
-// Function to generate flashcards using OpenAI
 async function generateFlashcards(text) {
   try {
     // Make a call to OpenAI API to generate flashcards
@@ -82,38 +89,36 @@ async function generateFlashcards(text) {
       model: 'gpt-3.5-turbo',
     });
 
-    // Extract relevant information from OpenAI response
-    //const generatedText = response.choices[0].message.content;
-
-    //console.log("OpenAI API response:", response);
-
     // Log the content of the message
     const content = response.choices[0]?.message.content;
     console.log("Response content:", content);
-  
-    // Assuming openaiApiResponse is the response from the OpenAI API
-    const flashcardArray = JSON.parse(content);
-    //console.log("Parsed flashcardArray:", flashcardArray);
 
     let processedFlashcards;
 
-    // Check if the response is a valid array
-    if (Array.isArray(flashcardArray) && flashcardArray.length > 0) {
-      // Process each flashcard in the array
-      processedFlashcards = flashcardArray.map(card => {
-      // Assuming each flashcard has [Title, Front side, Back side] structure
-      const [title, front, back] = card;
+    try {
+      // Attempt to parse the content as JSON
+      const flashcardArray = JSON.parse(content);
 
-      if (title && front && back) {
-        return { Title: title.trim(), 'Front side': front.trim(), 'Back side': back.trim() };
+      // Check if the response is a valid array
+      if (Array.isArray(flashcardArray) && flashcardArray.length > 0) {
+        // Process each flashcard in the array
+        processedFlashcards = flashcardArray.map(card => {
+          // Assuming each flashcard has [Title, Front side, Back side] structure
+          const [title, front, back] = card;
+
+          if (title && front && back) {
+            return { Title: title.trim(), 'Front side': front.trim(), 'Back side': back.trim() };
+          } else {
+            return null;
+          }
+        }).filter(card => card !== null);
+
+        console.log("Processed flashcards:", processedFlashcards);
       } else {
-        return null;
+        console.error('Invalid response format from the OpenAI API');
       }
-      }).filter(card => card !== null);
-
-      console.log("Processed flashcards:",processedFlashcards);
-    } else {
-      console.error('Invalid response format from the OpenAI API');
+    } catch (jsonError) {
+      console.error('Error parsing JSON from OpenAI API:', jsonError);
     }
 
     return processedFlashcards;
@@ -122,6 +127,8 @@ async function generateFlashcards(text) {
     throw error;
   }
 }
+
+
 
 // ... (other functions and endpoint handlers)
 
